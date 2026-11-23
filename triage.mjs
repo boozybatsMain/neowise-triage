@@ -46,11 +46,12 @@ export async function triageText(
   { classify = mockClassify, timeoutMs = MODEL_TIMEOUT_MS, onFailure = warn } = {},
 ) {
   const controller = new AbortController();
+  const timeoutError = new Error(`model timeout ${timeoutMs} ms`);
   let timer;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => {
       controller.abort();
-      reject(new Error("timeout"));
+      reject(timeoutError);
     }, timeoutMs);
   });
 
@@ -61,7 +62,8 @@ export async function triageText(
       timeout,
     ]);
   } catch (error) {
-    onFailure(error.message === "timeout" ? "timeout" : "model_error", error.message);
+    if (error === timeoutError) onFailure("timeout", error.message);
+    else onFailure("model_error", error.message);
     return manualReview();
   } finally {
     clearTimeout(timer);
