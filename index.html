@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neowise: было и стало</title>
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #fff; --text: #16181d; --muted: #5b6270; --line: #dfe3ea;
+      --accent: #2f5bea; --accent-soft: #e8eefe;
+      --ok: #137a3d; --ok-soft: #e3f5ea; --warn: #8a4b00; --warn-soft: #fdf0d8;
+      --bad: #b3261e; --bad-soft: #fde7e5; --info: #3c4a64; --info-soft: #e9edf4;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .lead { color: var(--muted); margin: 0 0 20px; max-width: 60em; }
+    .toggle { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+    .toggle button { border: 0; background: transparent; padding: 8px 16px; border-radius: 8px; font: inherit; cursor: pointer; color: var(--muted); }
+    .toggle button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+    .toggle small { display: block; font-size: 12px; opacity: .8; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 20px; margin-top: 16px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 15px; margin: 0 0 10px; }
+    .scenarios { display: flex; flex-wrap: wrap; gap: 8px; }
+    .scenarios button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+    .scenarios button:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .expect { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--info-soft); font-size: 14px; min-height: 2.6em; }
+    .expect b { font-weight: 600; }
+    .frame-wrap { margin-top: 16px; padding: 0; overflow: hidden; }
+    .frame-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+    iframe { display: block; width: 100%; height: 460px; border: 0; background: #fff; }
+    .log-card { align-self: start; max-height: calc(100vh - 40px); overflow: auto; position: sticky; top: 20px; }
+    @media (max-width: 900px) { .log-card { position: static; max-height: none; } }
+    .log-head { display: flex; justify-content: space-between; align-items: baseline; }
+    .log-head button { border: 0; background: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 13px; }
+    ol.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    ol.log li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .tag { border-radius: 6px; padding: 1px 7px; font-weight: 600; font-size: 12px; }
+    .v-old { background: #eceff3; color: #3a4150; }
+    .v-new { background: var(--accent-soft); color: var(--accent); }
+    .s-ok { background: var(--ok-soft); color: var(--ok); }
+    .s-warn { background: var(--warn-soft); color: var(--warn); }
+    .s-bad { background: var(--bad-soft); color: var(--bad); }
+    .s-info { background: var(--info-soft); color: var(--info); }
+    .ms { color: var(--muted); margin-left: auto; }
+    .sent { color: var(--muted); margin-top: 4px; word-break: break-word; }
+    pre { margin: 6px 0 0; padding: 6px 8px; background: #f3f5f8; border-radius: 6px; white-space: pre-wrap; word-break: break-word; font-size: 12px; }
+    .srv { margin-top: 6px; color: var(--warn); font-size: 12px; }
+    .empty { color: var(--muted); font-size: 14px; }
+    footer { margin-top: 24px; color: var(--muted); font-size: 13px; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Тестовое Neowise: было и стало</h1>
+  <p class="lead">Ниже настоящая страница из задания. Сервер и заглушка модели работают прямо в браузере тем же кодом, что в репозитории, поэтому всё можно проверить без установки. Переключай версию, жми сценарии или пиши в поле сам. Справа видно, что ответил сервер.</p>
+
+  <div class="toggle" role="group" aria-label="Версия">
+    <button type="button" data-version="old" aria-pressed="false">Было<small>исходный код</small></button>
+    <button type="button" data-version="new" aria-pressed="true">Стало<small>код из PR</small></button>
+  </div>
+
+  <div class="layout">
+    <div>
+      <section class="card">
+        <h2>Сценарии</h2>
+        <div class="scenarios" id="scenarios"></div>
+        <div class="expect" id="expect">Совет: сначала «Обычная заявка», потом любой сбой. Так видно, что старый черновик пропадает.</div>
+      </section>
+      <section class="card frame-wrap">
+        <div class="frame-head"><span id="frame-label">Стало: страница менеджера</span><span>это сама страница, в неё можно писать</span></div>
+        <iframe id="page" title="Страница менеджера"></iframe>
+      </section>
+    </div>
+    <section class="card log-card">
+      <div class="log-head"><h2>Что ответил сервер</h2><button type="button" id="clear">Очистить</button></div>
+      <ol class="log" id="log"></ol>
+      <p class="empty" id="log-empty">Пока пусто. Запусти сценарий.</p>
+    </section>
+  </div>
+
+  <footer>
+    Код: <a href="https://github.com/boozybatsMain/neowise-triage/pull/1">PR #1</a>. «Было» берёт страницу и обработчик из первого коммита, «Стало» из ветки PR. Единственное отличие от репозитория: в заглушке модели задержка сделана через браузерный <code>setTimeout</code> вместо <code>node:timers</code>.
+  </footer>
+</main>
+
+<script type="module">
+  import { parseInput, triageText } from "./lib/triage.mjs";
+  import { classify } from "./lib/mock-ai.mjs";
+
+  // Обработчик POST /api/triage из исходного server.mjs, построчно.
+  async function oldServer(rawBody) {
+    try {
+      const { text } = JSON.parse(rawBody);
+      const result = JSON.parse(await classify(text));
+      return { status: 200, body: { status: "ready", ...result } };
+    } catch {
+      return { status: 500, body: { status: "server_error" } };
+    }
+  }
+
+  // Обработчик из server.mjs в PR: те же parseInput и triageText.
+  async function newServer(rawBody, serverLog) {
+    const text = parseInput(rawBody);
+    if (text === null) return { status: 400, body: { status: "invalid_input" } };
+    const body = await triageText(text, { onFailure: (reason, details) => serverLog.push(`${reason}: ${details}`) });
+    return { status: 200, body };
+  }
+
+  const SCENARIOS = [
+    { label: "Обычная заявка", text: "Сколько стоит доставка в Алматы?",
+      old: "сырой JSON с темой и черновиком.", now: "тема «Доставка» и черновик, по-человечески." },
+    { label: "Пустой ввод", text: "   ",
+      old: "сервер всё равно зовёт модель и выдаёт черновик на пустую заявку.", now: "400 invalid_input, страница просит ввести текст." },
+    { label: "Модель тормозит", text: "Где мой заказ? [timeout]",
+      old: "ждём 1,2 с, старый черновик всё это время на экране.", now: "через 0,3 с ручной разбор, черновик стёрт." },
+    { label: "Модель упала", text: "Где мой заказ? [error]",
+      old: "500 server_error сырым JSON.", now: "ручной разбор, причина в логе сервера." },
+    { label: "Ответ не JSON", text: "Где мой заказ? [bad-json]",
+      old: "500 server_error.", now: "ручной разбор." },
+    { label: "Чужая тема", text: "Верните деньги [bad-topic]",
+      old: "показывает тему refund, которой нет в списке.", now: "ручной разбор." },
+    { label: "Черновик из пробелов", text: "Где мой заказ? [empty-draft]",
+      old: "пустой черновик как будто готовый ответ.", now: "ручной разбор." },
+    { label: "Две отправки подряд", race: true,
+      old: "медленный первый ответ приходит последним и перетирает свежий.", now: "первый запрос отменён, остаётся ответ на вторую заявку." },
+  ];
+
+  const iframe = document.querySelector("#page");
+  const logList = document.querySelector("#log");
+  const logEmpty = document.querySelector("#log-empty");
+  const expect = document.querySelector("#expect");
+  const frameLabel = document.querySelector("#frame-label");
+  let version = "new";
+  const NAMES = { old: "Было", new: "Стало" };
+
+  function statusClass(code, body) {
+    if (code >= 500) return "s-bad";
+    if (code >= 400) return "s-info";
+    return body.status === "ready" ? "s-ok" : "s-warn";
+  }
+
+  function addEntry(ver, rawBody) {
+    logEmpty.hidden = true;
+    const li = document.createElement("li");
+    let sent = rawBody;
+    try { sent = JSON.parse(rawBody).text; } catch {}
+    li.innerHTML = `<div class="row"><span class="tag v-${ver}">${NAMES[ver]}</span><span class="tag s-info">ждём ответ…</span><span class="ms"></span></div><div class="sent"></div>`;
+    li.querySelector(".sent").textContent = `Отправлено: «${sent}»`;
+    logList.prepend(li);
+    const [, badge] = li.querySelectorAll(".tag");
+    const ms = li.querySelector(".ms");
+    return {
+      done(code, body, elapsed, serverLog) {
+        badge.className = `tag ${statusClass(code, body)}`;
+        badge.textContent = `${code} ${body.status}`;
+        ms.textContent = `${Math.round(elapsed)} мс`;
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(body);
+        li.append(pre);
+        for (const line of serverLog) {
+          const div = document.createElement("div");
+          div.className = "srv";
+          div.textContent = `Лог сервера: ${line}`;
+          li.append(div);
+        }
+      },
+      aborted(elapsed) {
+        badge.className = "tag s-info";
+        badge.textContent = "отменён страницей";
+        ms.textContent = `${Math.round(elapsed)} мс`;
+      },
+    };
+  }
+
+  // Подменяем fetch внутри страницы: запросы на /api/triage уходят в обработчик выше.
+  function makeFetch(ver, realFetch) {
+    return (url, options = {}) => {
+      if (!String(url).endsWith("/api/triage")) return realFetch(url, options);
+      const started = performance.now();
+      const entry = addEntry(ver, options.body);
+      const signal = options.signal;
+      return new Promise((resolve, reject) => {
+        const onAbort = () => {
+          entry.aborted(performance.now() - started);
+          reject(new DOMException("The operation was aborted", "AbortError"));
+        };
+        if (signal?.aborted) return onAbort();
+        signal?.addEventListener("abort", onAbort, { once: true });
+        const serverLog = [];
+        const run = ver === "old" ? oldServer(options.body) : newServer(options.body, serverLog);
+        run.then(({ status, body }) => {
+          if (signal?.aborted) return;
+          signal?.removeEventListener("abort", onAbort);
+          entry.done(status, body, performance.now() - started, serverLog);
+          resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json; charset=utf-8" } }));
+        });
+      });
+    };
+  }
+
+  function loadPage() {
+    iframe.src = `${version}/index.html`;
+    frameLabel.textContent = `${NAMES[version]}: страница менеджера`;
+  }
+  iframe.addEventListener("load", () => {
+    const win = iframe.contentWindow;
+    win.fetch = makeFetch(version, win.fetch.bind(win));
+  });
+
+  function submit(text) {
+    const doc = iframe.contentDocument;
+    doc.querySelector("#message").value = text;
+    doc.querySelector("button[type=submit]").click();
+  }
+
+  const box = document.querySelector("#scenarios");
+  for (const s of SCENARIOS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = s.label;
+    button.addEventListener("click", () => {
+      const now = version === "new";
+      expect.innerHTML = `<b>${NAMES[version]}:</b> ${now ? s.now : s.old} <br><b>${now ? "Было" : "Стало"}:</b> ${now ? s.old : s.now}`;
+      if (s.race) {
+        submit("Где мой заказ? [timeout]");
+        setTimeout(() => submit("Сколько стоит доставка?"), 150);
+      } else {
+        submit(s.text);
+      }
+    });
+    box.append(button);
+  }
+
+  for (const button of document.querySelectorAll(".toggle button")) {
+    button.addEventListener("click", () => {
+      version = button.dataset.version;
+      for (const b of document.querySelectorAll(".toggle button")) b.setAttribute("aria-pressed", String(b === button));
+      loadPage();
+    });
+  }
+  document.querySelector("#clear").addEventListener("click", () => { logList.replaceChildren(); logEmpty.hidden = false; });
+
+  loadPage();
+</script>
+</body>
+</html>

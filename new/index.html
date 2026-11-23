@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Входящие заявки</title>
+  <style>
+    body { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; font: 1rem/1.5 system-ui, sans-serif; }
+    textarea { box-sizing: border-box; display: block; width: 100%; margin: .5rem 0; padding: .5rem; font: inherit; }
+    button { padding: .4rem .8rem; font: inherit; }
+    pre { margin: 0; white-space: pre-wrap; font: inherit; }
+    #status[data-kind="warn"] { padding: .5rem .75rem; border-left: 4px solid #d97706; background: #fef3c7; color: #78350f; }
+    dt { margin-top: .75rem; font-weight: 600; }
+    dd { margin: .25rem 0 0; }
+  </style>
+</head>
+<body>
+  <h1>Входящие заявки</h1>
+  <form>
+    <label for="message">Текст заявки</label>
+    <textarea id="message" rows="4"></textarea>
+    <button type="submit">Разобрать заявку</button>
+  </form>
+  <section id="result" aria-live="polite">
+    <p id="status"></p>
+    <dl id="answer" hidden>
+      <dt>Тема</dt>
+      <dd id="topic"></dd>
+      <dt>Черновик ответа</dt>
+      <dd><pre id="draft"></pre></dd>
+    </dl>
+  </section>
+  <script type="module">
+    const form = document.querySelector("form");
+    const statusText = document.querySelector("#status");
+    const answer = document.querySelector("#answer");
+    const topic = document.querySelector("#topic");
+    const draft = document.querySelector("#draft");
+    const TOPIC_LABELS = { delivery: "Доставка", pricing: "Цена", other: "Другое" };
+    const MESSAGES = {
+      ready: "Проверьте черновик перед отправкой клиенту.",
+      invalid_input: "Введите текст заявки.",
+      manual_review: "AI не смог подготовить ответ. Разберите заявку вручную.",
+      unavailable: "Сервис не ответил. Разберите заявку вручную.",
+    };
+    let latest = null;
+
+    // Любой показ сначала стирает тему и черновик, так старый черновик не останется на экране.
+    function show(text, { kind = "info", result = null } = {}) {
+      statusText.textContent = text;
+      statusText.dataset.kind = kind;
+      topic.textContent = result ? TOPIC_LABELS[result.topic] ?? result.topic : "";
+      draft.textContent = result ? result.draft : "";
+      answer.hidden = !result;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      latest?.abort();
+      const request = new AbortController();
+      latest = request;
+      show("Разбираю заявку…");
+      try {
+        const reply = await fetch("/api/triage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: document.querySelector("#message").value }),
+          signal: request.signal,
+        });
+        const data = await reply.json();
+        if (request !== latest) return;
+        if (data.status === "ready") show(MESSAGES.ready, { result: data });
+        else if (data.status === "invalid_input") show(MESSAGES.invalid_input, { kind: "warn" });
+        else if (data.status === "manual_review") show(MESSAGES.manual_review, { kind: "warn" });
+        else show(MESSAGES.unavailable, { kind: "warn" });
+      } catch {
+        // Запрос отменён более новым: на экране уже его состояние.
+        if (request !== latest) return;
+        show(MESSAGES.unavailable, { kind: "warn" });
+      }
+    });
+  </script>
+</body>
+</html>
